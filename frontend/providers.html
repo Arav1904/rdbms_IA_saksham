@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Care Providers — Paws Shelter</title>
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount">
+    <div class="sidebar-logo"><div class="logo-icon">🐾</div><h2><span>Paws</span> Shelter<br>System</h2></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="index.html"        class="nav-item"><span class="icon">📊</span> Dashboard</a>
+      <div class="nav-section-label">Animals</div>
+      <a href="pets.html"         class="nav-item"><span class="icon">🐾</span> All Pets</a>
+      <a href="training.html"     class="nav-item"><span class="icon">🎓</span> Training</a>
+      <div class="nav-section-label">Adoption</div>
+      <a href="adopters.html"     class="nav-item"><span class="icon">👥</span> Adopters</a>
+      <a href="applications.html" class="nav-item"><span class="icon">📋</span> Applications</a>
+      <div class="nav-section-label">Care</div>
+      <a href="appointments.html" class="nav-item"><span class="icon">📅</span> Appointments</a>
+      <a href="medical.html"      class="nav-item"><span class="icon">🩺</span> Medical Records</a>
+      <a href="providers.html"    class="nav-item active"><span class="icon">👨‍⚕️</span> Care Providers</a>
+      <div class="nav-section-label">Admin</div>
+      <a href="staff.html"        class="nav-item"><span class="icon">🧑‍💼</span> Staff</a>
+      <a href="donations.html"    class="nav-item"><span class="icon">💛</span> Donations</a>
+    </nav>
+  </div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">👨‍⚕️ Care Providers</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="openModal('addProviderModal')">+ Add Provider</button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div class="section-header">
+        <div><h1>Veterinarians & Groomers</h1><p>All registered care professionals</p></div>
+      </div>
+      <div class="grid-auto stagger" id="providers-grid">
+        <div class="loader"><div class="spinner"></div> Loading…</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Add Provider Modal -->
+<div class="modal-overlay" id="addProviderModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>👨‍⚕️ Add Care Provider</h3>
+      <button class="modal-close" onclick="closeModal('addProviderModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Provider ID *</label><input class="form-input" id="ap-id" placeholder="e.g. PR004"/></div>
+        <div class="form-group">
+          <label class="form-label">Type *</label>
+          <select class="form-select" id="ap-type" onchange="toggleProviderType()">
+            <option value="Veterinarian">Veterinarian</option>
+            <option value="Groomer">Groomer</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="ap-name" placeholder="Dr. Name"/></div>
+        <div class="form-group"><label class="form-label">Qualification</label><input class="form-input" id="ap-qual" placeholder="e.g. BVSc, MVSc"/></div>
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="ap-phone" placeholder="10-digit number"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="ap-email" type="email" placeholder="email@example.com"/></div>
+        <div class="form-group"><label class="form-label">Visiting Fee (₹)</label><input class="form-input" id="ap-fee" type="number" placeholder="0.00"/></div>
+
+        <!-- Vet fields -->
+        <div class="form-group" id="vet-license"><label class="form-label">Vet License No. *</label><input class="form-input" id="ap-license" placeholder="VET-MH-XXXX"/></div>
+        <div class="form-group" id="vet-spec"><label class="form-label">Specialization</label><input class="form-input" id="ap-spec" placeholder="e.g. Small Animal Surgery"/></div>
+
+        <!-- Groomer fields -->
+        <div class="form-group full" id="grm-tools" style="display:none"><label class="form-label">Tools Used</label><input class="form-input" id="ap-tools" placeholder="e.g. Clippers, Dryer, Combs"/></div>
+        <div class="form-group full" id="grm-styles" style="display:none"><label class="form-label">Grooming Styles</label><input class="form-input" id="ap-styles" placeholder="e.g. Puppy Cut, Teddy Bear Cut"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addProviderModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addProvider()">Add Provider</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/api.js"></script>
+<script>
+function toggleProviderType() {
+  const isVet = document.getElementById('ap-type').value === 'Veterinarian';
+  document.getElementById('vet-license').style.display  = isVet ? '' : 'none';
+  document.getElementById('vet-spec').style.display     = isVet ? '' : 'none';
+  document.getElementById('grm-tools').style.display    = isVet ? 'none' : '';
+  document.getElementById('grm-styles').style.display   = isVet ? 'none' : '';
+}
+
+const DAY_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+async function loadProviders() {
+  const grid = document.getElementById('providers-grid');
+  try {
+    const providers = await API.get('/providers');
+    if (!providers.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">👨‍⚕️</div><h3>No providers found</h3></div>';
+      return;
+    }
+    grid.innerHTML = providers.map(p => {
+      const isVet = !!p.vet_license_no;
+      const days = p.availability ? p.availability.split(', ').sort((a,b) => DAY_ORDER.indexOf(a)-DAY_ORDER.indexOf(b)) : [];
+      return `
+        <div class="card" style="animation-fill-mode:both">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+            <div style="width:56px;height:56px;border-radius:50%;background:${isVet ? 'rgba(74,144,196,.15)' : 'rgba(122,158,126,.15)'};display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">
+              ${isVet ? '🩺' : '✂️'}
+            </div>
+            <div>
+              <div style="font-family:var(--font-display);font-size:1.05rem;color:var(--brown-dark)">${p.name}</div>
+              <span class="chip ${isVet ? 'chip-blue' : 'chip-green'}">${isVet ? 'Veterinarian' : 'Groomer'}</span>
+            </div>
+          </div>
+          <div class="detail-grid" style="gap:10px">
+            <div class="detail-item"><label>ID</label><span>${p.provider_id}</span></div>
+            <div class="detail-item"><label>Fee</label><span>${formatCurrency(p.visiting_fee)}</span></div>
+            <div class="detail-item"><label>Phone</label><span>${p.phone || '—'}</span></div>
+            <div class="detail-item"><label>Appointments</label><span>${p.appointment_count}</span></div>
+            ${isVet ? `
+              <div class="detail-item"><label>License</label><span>${p.vet_license_no}</span></div>
+              <div class="detail-item"><label>Specialization</label><span>${p.specialization || '—'}</span></div>
+            ` : `
+              <div class="detail-item"><label>Styles</label><span>${p.grooming_styles || '—'}</span></div>
+              <div class="detail-item"><label>Tools</label><span>${p.tools_used || '—'}</span></div>
+            `}
+            <div class="detail-item full" style="grid-column:1/-1"><label>Availability</label>
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
+                ${days.map(d => `<span class="chip chip-amber" style="font-size:.7rem">${d.slice(0,3)}</span>`).join('') || '—'}
+              </div>
+            </div>
+          </div>
+          ${p.email ? `<div style="margin-top:12px;font-size:.8rem;color:var(--text-mute)">📧 ${p.email}</div>` : ''}
+          ${p.qualification ? `<div style="font-size:.8rem;color:var(--text-mute)">🎓 ${p.qualification}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${err.message}</p></div>`;
+  }
+}
+
+async function addProvider() {
+  const type = document.getElementById('ap-type').value;
+  const body = {
+    provider_id:   document.getElementById('ap-id').value.trim(),
+    name:          document.getElementById('ap-name').value.trim(),
+    qualification: document.getElementById('ap-qual').value.trim(),
+    phone:         document.getElementById('ap-phone').value.trim(),
+    email:         document.getElementById('ap-email').value.trim(),
+    visiting_fee:  document.getElementById('ap-fee').value || null,
+    type,
+    vet_license_no: document.getElementById('ap-license').value.trim(),
+    specialization: document.getElementById('ap-spec').value.trim(),
+    tools_used:     document.getElementById('ap-tools').value.trim(),
+    grooming_styles: document.getElementById('ap-styles').value.trim()
+  };
+  if (!body.provider_id || !body.name) { showToast('ID and Name are required', 'error'); return; }
+  try {
+    await API.post('/providers', body);
+    showToast('Provider added! 👨‍⚕️', 'success');
+    closeModal('addProviderModal');
+    loadProviders();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+loadProviders();
+</script>
+</body>
+</html>

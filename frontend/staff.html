@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Staff — Paws Shelter</title>
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount">
+    <div class="sidebar-logo"><div class="logo-icon">🐾</div><h2><span>Paws</span> Shelter<br>System</h2></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="index.html"        class="nav-item"><span class="icon">📊</span> Dashboard</a>
+      <div class="nav-section-label">Animals</div>
+      <a href="pets.html"         class="nav-item"><span class="icon">🐾</span> All Pets</a>
+      <a href="training.html"     class="nav-item"><span class="icon">🎓</span> Training</a>
+      <div class="nav-section-label">Adoption</div>
+      <a href="adopters.html"     class="nav-item"><span class="icon">👥</span> Adopters</a>
+      <a href="applications.html" class="nav-item"><span class="icon">📋</span> Applications</a>
+      <div class="nav-section-label">Care</div>
+      <a href="appointments.html" class="nav-item"><span class="icon">📅</span> Appointments</a>
+      <a href="medical.html"      class="nav-item"><span class="icon">🩺</span> Medical Records</a>
+      <a href="providers.html"    class="nav-item"><span class="icon">👨‍⚕️</span> Care Providers</a>
+      <div class="nav-section-label">Admin</div>
+      <a href="staff.html"        class="nav-item active"><span class="icon">🧑‍💼</span> Staff</a>
+      <a href="donations.html"    class="nav-item"><span class="icon">💛</span> Donations</a>
+    </nav>
+  </div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">🧑‍💼 Staff Management</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="openModal('addStaffModal')">+ Add Staff</button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div class="section-header">
+        <div><h1>Staff Directory</h1><p>Employees and volunteers at the shelter</p></div>
+      </div>
+
+      <div id="staff-summary" class="stats-grid stagger" style="margin-bottom:28px"></div>
+
+      <div class="grid-auto stagger" id="staff-grid">
+        <div class="loader"><div class="spinner"></div> Loading…</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Add Staff Modal -->
+<div class="modal-overlay" id="addStaffModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🧑‍💼 Add Staff Member</h3>
+      <button class="modal-close" onclick="closeModal('addStaffModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Staff ID *</label><input class="form-input" id="as-id" placeholder="e.g. ST004"/></div>
+        <div class="form-group">
+          <label class="form-label">Type *</label>
+          <select class="form-select" id="as-type" onchange="toggleStaffType()">
+            <option value="Volunteer">Volunteer</option>
+            <option value="Employee">Employee</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="as-name" placeholder="Full name"/></div>
+        <div class="form-group"><label class="form-label">Role</label><input class="form-input" id="as-role" placeholder="e.g. Caretaker, Manager"/></div>
+        <div class="form-group">
+          <label class="form-label">Shift</label>
+          <select class="form-select" id="as-shift">
+            <option>Morning</option><option>Evening</option><option>Night</option>
+          </select>
+        </div>
+        <!-- Volunteer field -->
+        <div class="form-group" id="vol-hours"><label class="form-label">Hours/Week</label><input class="form-input" id="as-hours" type="number" placeholder="20"/></div>
+        <!-- Employee fields -->
+        <div class="form-group" id="emp-salary" style="display:none"><label class="form-label">Salary (₹/mo)</label><input class="form-input" id="as-salary" type="number" placeholder="30000"/></div>
+        <div class="form-group" id="emp-id" style="display:none"><label class="form-label">Employee ID</label><input class="form-input" id="as-empid" placeholder="EMP-XXXX"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addStaffModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addStaff()">Add Staff</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/api.js"></script>
+<script>
+function toggleStaffType() {
+  const isEmp = document.getElementById('as-type').value === 'Employee';
+  document.getElementById('vol-hours').style.display  = isEmp ? 'none' : '';
+  document.getElementById('emp-salary').style.display = isEmp ? '' : 'none';
+  document.getElementById('emp-id').style.display     = isEmp ? '' : 'none';
+}
+
+const SHIFT_COLOR = { Morning: 'chip-amber', Evening: 'chip-blue', Night: 'chip-gray' };
+const SHIFT_ICON  = { Morning: '🌅', Evening: '🌇', Night: '🌙' };
+
+async function loadStaff() {
+  const grid = document.getElementById('staff-grid');
+  try {
+    const staff = await API.get('/staff');
+
+    // Summary
+    const employees  = staff.filter(s => s.staff_type === 'Employee');
+    const volunteers = staff.filter(s => s.staff_type === 'Volunteer');
+    const totalSalary = employees.reduce((s,e) => s + Number(e.salary||0), 0);
+    document.getElementById('staff-summary').innerHTML = `
+      <div class="stat-card amber"><div class="stat-icon">👥</div><div class="stat-value">${staff.length}</div><div class="stat-label">Total Staff</div></div>
+      <div class="stat-card green"><div class="stat-icon">🤝</div><div class="stat-value">${volunteers.length}</div><div class="stat-label">Volunteers</div></div>
+      <div class="stat-card blue"><div class="stat-icon">💼</div><div class="stat-value">${employees.length}</div><div class="stat-label">Employees</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value">₹${totalSalary.toLocaleString('en-IN')}</div><div class="stat-label">Monthly Salary</div></div>
+    `;
+
+    if (!staff.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🧑‍💼</div><h3>No staff found</h3></div>';
+      return;
+    }
+
+    grid.innerHTML = staff.map(s => `
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div style="width:52px;height:52px;border-radius:50%;background:${s.staff_type==='Employee'?'rgba(74,144,196,.15)':'rgba(122,158,126,.15)'};display:flex;align-items:center;justify-content:center;font-size:1.4rem">
+            ${s.staff_type === 'Employee' ? '💼' : '🤝'}
+          </div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:1rem;color:var(--brown-dark)">${s.name}</div>
+            <div style="font-size:.8rem;color:var(--text-mute)">${s.role || 'Staff'}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+          <span class="chip ${s.staff_type==='Employee'?'chip-blue':'chip-green'}">${s.staff_type}</span>
+          <span class="chip ${SHIFT_COLOR[s.shift]||'chip-gray'}">${SHIFT_ICON[s.shift]||''} ${s.shift}</span>
+        </div>
+        <div class="detail-grid" style="gap:10px;font-size:.85rem">
+          <div class="detail-item"><label>Staff ID</label><span>${s.staff_id}</span></div>
+          <div class="detail-item"><label>Pets Cared</label><span>${s.pets_cared} 🐾</span></div>
+          ${s.staff_type === 'Volunteer' ? `<div class="detail-item"><label>Hours/Week</label><span>${s.hours_per_week || '—'}</span></div>` : ''}
+          ${s.staff_type === 'Employee'  ? `<div class="detail-item"><label>Salary</label><span>${formatCurrency(s.salary)}/mo</span></div>` : ''}
+          ${s.emp_id ? `<div class="detail-item"><label>Emp. ID</label><span>${s.emp_id}</span></div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${err.message}</p></div>`;
+  }
+}
+
+async function addStaff() {
+  const body = {
+    staff_id:      document.getElementById('as-id').value.trim(),
+    name:          document.getElementById('as-name').value.trim(),
+    role:          document.getElementById('as-role').value.trim(),
+    shift:         document.getElementById('as-shift').value,
+    type:          document.getElementById('as-type').value,
+    hours_per_week: document.getElementById('as-hours').value || null,
+    salary:        document.getElementById('as-salary').value || null,
+    emp_id:        document.getElementById('as-empid').value.trim()
+  };
+  if (!body.staff_id || !body.name) { showToast('Staff ID and Name are required', 'error'); return; }
+  try {
+    await API.post('/staff', body);
+    showToast('Staff member added! 🧑‍💼', 'success');
+    closeModal('addStaffModal');
+    loadStaff();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+loadStaff();
+</script>
+</body>
+</html>

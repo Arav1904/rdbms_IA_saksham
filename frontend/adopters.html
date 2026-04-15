@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Adopters — Paws Shelter</title>
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount">
+    <div class="sidebar-logo"><div class="logo-icon">🐾</div><h2><span>Paws</span> Shelter<br>System</h2></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="index.html"        class="nav-item"><span class="icon">📊</span> Dashboard</a>
+      <div class="nav-section-label">Animals</div>
+      <a href="pets.html"         class="nav-item"><span class="icon">🐾</span> All Pets</a>
+      <a href="training.html"     class="nav-item"><span class="icon">🎓</span> Training</a>
+      <div class="nav-section-label">Adoption</div>
+      <a href="adopters.html"     class="nav-item active"><span class="icon">👥</span> Adopters</a>
+      <a href="applications.html" class="nav-item"><span class="icon">📋</span> Applications</a>
+      <div class="nav-section-label">Care</div>
+      <a href="appointments.html" class="nav-item"><span class="icon">📅</span> Appointments</a>
+      <a href="medical.html"      class="nav-item"><span class="icon">🩺</span> Medical Records</a>
+      <a href="providers.html"    class="nav-item"><span class="icon">👨‍⚕️</span> Care Providers</a>
+      <div class="nav-section-label">Admin</div>
+      <a href="staff.html"        class="nav-item"><span class="icon">🧑‍💼</span> Staff</a>
+      <a href="donations.html"    class="nav-item"><span class="icon">💛</span> Donations</a>
+    </nav>
+  </div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">👥 Adopters</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="openModal('addAdopterModal')">+ Register Adopter</button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div class="section-header">
+        <div><h1>Adopter Registry</h1><p id="count-label">Loading…</p></div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="searchInput" placeholder="Search by name or email…" oninput="debounceLoad()"/>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Type</th>
+              <th>Applications</th>
+              <th>Donated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adopters-tbody">
+            <tr><td colspan="7"><div class="loader"><div class="spinner"></div> Loading…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="pagination" class="pagination"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Add Adopter Modal -->
+<div class="modal-overlay" id="addAdopterModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>👤 Register New Adopter</h3>
+      <button class="modal-close" onclick="closeModal('addAdopterModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Adopter ID *</label><input class="form-input" id="aa-id" placeholder="e.g. AD005"/></div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="aa-type" onchange="toggleOrgField()">
+            <option value="Individual">Individual</option>
+            <option value="Organization">Organization</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">First Name *</label><input class="form-input" id="aa-fname" placeholder="First name"/></div>
+        <div class="form-group"><label class="form-label">Last Name *</label><input class="form-input" id="aa-lname" placeholder="Last name"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="aa-email" type="email" placeholder="email@example.com"/></div>
+        <div class="form-group"><label class="form-label">Phone *</label><input class="form-input" id="aa-phone" placeholder="10-digit number"/></div>
+        <div class="form-group"><label class="form-label">Date of Birth</label><input class="form-input" id="aa-dob" type="date"/></div>
+        <div class="form-group"><label class="form-label">ID Proof</label><input class="form-input" id="aa-idproof" placeholder="AADHAR / PAN No."/></div>
+        <div class="form-group full"><label class="form-label">Address</label><input class="form-input" id="aa-address" placeholder="Full address"/></div>
+        <div class="form-group" id="field-occupation"><label class="form-label">Occupation</label><input class="form-input" id="aa-occupation" placeholder="e.g. Engineer"/></div>
+        <div class="form-group" id="field-org" style="display:none"><label class="form-label">Org. Reg. No. *</label><input class="form-input" id="aa-orgreg" placeholder="ORG-MH-XXXX"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addAdopterModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addAdopter()">Register</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="adopterDetailModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 id="detail-title">Adopter Details</h3>
+      <button class="modal-close" onclick="closeModal('adopterDetailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('adopterDetailModal')">Close</button>
+      <button class="btn btn-danger" id="delete-btn">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/api.js"></script>
+<script>
+let currentPage = 1, totalPages = 1;
+let debounceTimer;
+
+function debounceLoad() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => { currentPage = 1; loadAdopters(); }, 350);
+}
+
+function toggleOrgField() {
+  const isOrg = document.getElementById('aa-type').value === 'Organization';
+  document.getElementById('field-org').style.display = isOrg ? '' : 'none';
+  document.getElementById('field-occupation').style.display = isOrg ? 'none' : '';
+}
+
+async function loadAdopters() {
+  const tbody = document.getElementById('adopters-tbody');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  try {
+    const search = document.getElementById('searchInput').value;
+    const params = new URLSearchParams({ page: currentPage, limit: 10 });
+    if (search) params.append('search', search);
+    const data = await API.get('/adopters?' + params);
+    totalPages = Math.ceil(data.total / 10);
+    document.getElementById('count-label').textContent = `${data.total} adopter${data.total !== 1 ? 's' : ''} registered`;
+    if (!data.adopters.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><h3>No adopters found</h3></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.adopters.map(a => `
+      <tr>
+        <td><strong>${a.first_name} ${a.last_name}</strong><br><small style="color:var(--text-mute)">${a.adopter_id}</small></td>
+        <td>${a.email || '—'}</td>
+        <td>${a.phone}</td>
+        <td>
+          ${a.occupation ? `<span class="chip chip-blue">Individual</span>` : ''}
+          ${a.org_reg_no ? `<span class="chip chip-amber">Org</span>` : ''}
+        </td>
+        <td><span class="chip chip-gray">${a.app_count} apps</span></td>
+        <td>${formatCurrency(a.total_donated)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="viewAdopter('${a.adopter_id}')">View</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAdopter('${a.adopter_id}')">🗑</button>
+        </td>
+      </tr>
+    `).join('');
+    renderPagination();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⚠️</div><p>${err.message}</p></div></td></tr>`;
+  }
+}
+
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  if (currentPage > 1) html += `<button class="page-btn" onclick="goPage(${currentPage-1})">‹</button>`;
+  for (let i = 1; i <= totalPages; i++) html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  if (currentPage < totalPages) html += `<button class="page-btn" onclick="goPage(${currentPage+1})">›</button>`;
+  el.innerHTML = html;
+}
+function goPage(p) { currentPage = p; loadAdopters(); }
+
+async function viewAdopter(id) {
+  openModal('adopterDetailModal');
+  document.getElementById('detail-body').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const a = await API.get('/adopters/' + id);
+    document.getElementById('detail-title').textContent = `👤 ${a.first_name} ${a.last_name}`;
+    document.getElementById('delete-btn').onclick = () => deleteAdopter(id);
+    document.getElementById('detail-body').innerHTML = `
+      <div class="detail-grid" style="margin-bottom:20px">
+        <div class="detail-item"><label>Adopter ID</label><span>${a.adopter_id}</span></div>
+        <div class="detail-item"><label>Phone</label><span>${a.phone}</span></div>
+        <div class="detail-item"><label>Email</label><span>${a.email || '—'}</span></div>
+        <div class="detail-item"><label>DOB</label><span>${formatDate(a.dob)}</span></div>
+        <div class="detail-item"><label>ID Proof</label><span>${a.id_proof || '—'}</span></div>
+        <div class="detail-item"><label>Occupation</label><span>${a.occupation || '—'}</span></div>
+        ${a.org_reg_no ? `<div class="detail-item"><label>Org. Reg. No.</label><span>${a.org_reg_no}</span></div>` : ''}
+        <div class="detail-item full"><label>Address</label><span>${a.address || '—'}</span></div>
+      </div>
+
+      ${a.references?.length ? `
+        <div class="card-title" style="margin-bottom:10px">📌 References</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+          ${a.references.map(r => `<div style="background:var(--cream);border-radius:10px;padding:10px 14px;font-size:.85rem">
+            <strong>${r.ref_name}</strong><br><span style="color:var(--text-mute)">${r.ref_phone}</span></div>`).join('')}
+        </div>` : ''}
+
+      ${a.applications?.length ? `
+        <div class="card-title" style="margin-bottom:10px">📋 Applications</div>
+        ${a.applications.map(ap => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--cream);border-radius:10px;margin-bottom:8px;font-size:.85rem">
+            <span><strong>${ap.pet_name}</strong> (${ap.breed || '—'})</span>
+            <span>${formatDate(ap.application_date)}</span>
+            ${statusBadge(ap.status)}
+          </div>`).join('')}` : ''}
+
+      ${a.donations?.length ? `
+        <div class="card-title" style="margin:16px 0 10px">💛 Donations</div>
+        ${a.donations.map(d => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(232,150,12,.08);border-radius:10px;margin-bottom:8px;font-size:.85rem">
+            <span><strong>${formatCurrency(d.amount)}</strong> — ${d.purpose || 'General'}</span>
+            <span style="color:var(--text-mute)">${formatDate(d.donation_date)} · ${d.payment_mode}</span>
+          </div>`).join('')}` : ''}
+    `;
+  } catch (err) {
+    document.getElementById('detail-body').innerHTML = `<div class="empty-state"><p>${err.message}</p></div>`;
+  }
+}
+
+async function addAdopter() {
+  const body = {
+    adopter_id: document.getElementById('aa-id').value.trim(),
+    first_name: document.getElementById('aa-fname').value.trim(),
+    last_name:  document.getElementById('aa-lname').value.trim(),
+    email:      document.getElementById('aa-email').value.trim(),
+    phone:      document.getElementById('aa-phone').value.trim(),
+    address:    document.getElementById('aa-address').value.trim(),
+    dob:        document.getElementById('aa-dob').value || null,
+    id_proof:   document.getElementById('aa-idproof').value.trim(),
+    type:       document.getElementById('aa-type').value,
+    occupation: document.getElementById('aa-occupation').value.trim(),
+    org_reg_no: document.getElementById('aa-orgreg').value.trim()
+  };
+  if (!body.adopter_id || !body.first_name || !body.phone) { showToast('ID, first name and phone are required', 'error'); return; }
+  try {
+    await API.post('/adopters', body);
+    showToast('Adopter registered! 👥', 'success');
+    closeModal('addAdopterModal');
+    loadAdopters();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function deleteAdopter(id) {
+  if (!confirm(`Delete adopter ${id}? This will also remove their applications.`)) return;
+  try {
+    await API.delete('/adopters/' + id);
+    showToast('Adopter deleted', 'success');
+    closeModal('adopterDetailModal');
+    loadAdopters();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+loadAdopters();
+</script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Dashboard — Paws Shelter</title>
+  <link rel="stylesheet" href="css/main.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Quick search…"/>
+        </div>
+        <button class="icon-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <span id="today-date" style="font-size:.78rem;color:var(--text-mute);white-space:nowrap"></span>
+      </div>
+    </header>
+    <main class="page-content">
+      <div class="section-header">
+        <div><h1>Shelter Overview</h1><p id="greeting">Loading your dashboard…</p></div>
+        <a href="pets.html" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Pet
+        </a>
+      </div>
+
+      <div class="stats-grid stagger" id="stats-grid">
+        <div class="loader"><div class="spinner"></div> Loading…</div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:22px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Breed Distribution
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:256px"><canvas id="breedChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Donations by Payment Mode
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:256px"><canvas id="donationChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Recent Activity
+            </div>
+            <a href="applications.html" class="card-action">View all
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </div>
+          <div id="activity-list" class="activity-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              Application Status
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:180px;margin-bottom:16px"><canvas id="appChart"></canvas></div>
+          <div id="app-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="toast-container"></div>
+<script src="js/api.js"></script>
+<script>
+document.getElementById('today-date').textContent =
+  new Date().toLocaleDateString('en-IN',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+document.getElementById('greeting').textContent =
+  `Good ${new Date().getHours()<12?'morning':new Date().getHours()<17?'afternoon':'evening'} — here's your shelter at a glance`;
+
+Chart.defaults.font.family="'DM Sans',sans-serif";
+Chart.defaults.color='#5C4033';
+const C=['#E8960C','#7A9E7E','#4A90C4','#C0392B','#8E44AD','#16A085','#F39C12','#2980B9'];
+
+async function loadDashboard() {
+  try {
+    const stats = await API.get('/dashboard/stats');
+    renderStats(stats);
+    const [breeds, donations, activity] = await Promise.all([
+      API.get('/dashboard/breed-distribution'),
+      API.get('/dashboard/donation-breakdown'),
+      API.get('/dashboard/recent-activity'),
+    ]);
+    renderBreedChart(breeds);
+    renderDonationChart(donations);
+    renderAppChart(stats.applications);
+    renderActivity(activity);
+  } catch(err) { showToast('Could not load dashboard: '+err.message,'error'); }
+}
+
+function renderStats({pets,adopters,applications,donations,appointments}) {
+  const avPct = pets.total>0?Math.round(pets.available/pets.total*100):0;
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card amber">
+      <div class="stat-card-inner">
+        <div><div class="stat-value">${pets.total}</div><div class="stat-label">Total Pets</div></div>
+        <div class="stat-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="13" r="4"/><circle cx="5" cy="9" r="2"/><circle cx="19" cy="9" r="2"/><circle cx="8" cy="5" r="2"/><circle cx="16" cy="5" r="2"/></svg>
+        </div>
+      </div>
+      <div class="stat-sub">${pets.available} available · ${pets.adopted} adopted</div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${avPct}%"></div></div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-card-inner">
+        <div><div class="stat-value">${pets.available}</div><div class="stat-label">Available Now</div></div>
+        <div class="stat-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+      </div>
+      <div class="stat-sub">${pets.reserved} reserved for adoption</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-card-inner">
+        <div><div class="stat-value">${adopters.total}</div><div class="stat-label">Adopters</div></div>
+        <div class="stat-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+      </div>
+      <div class="stat-sub">${applications.pending} pending applications</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-card-inner">
+        <div><div class="stat-value">₹${Number(donations.total).toLocaleString('en-IN')}</div><div class="stat-label">Donations</div></div>
+        <div class="stat-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+      </div>
+      <div class="stat-sub">Total funds raised</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-card-inner">
+        <div><div class="stat-value">${appointments.total}</div><div class="stat-label">Appointments</div></div>
+        <div class="stat-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+      </div>
+      <div class="stat-sub">Vet & grooming sessions</div>
+    </div>
+  `;
+}
+
+function renderBreedChart(data) {
+  new Chart(document.getElementById('breedChart').getContext('2d'), {
+    type:'doughnut',
+    data:{labels:data.map(d=>d.breed),datasets:[{data:data.map(d=>d.count),backgroundColor:C,borderWidth:3,borderColor:'#FEFAF4',hoverBorderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'right',labels:{padding:14,font:{size:11},usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+ctx.parsed+' pets'}}}}
+  });
+}
+
+function renderDonationChart(data) {
+  new Chart(document.getElementById('donationChart').getContext('2d'), {
+    type:'bar',
+    data:{labels:data.map(d=>d.payment_mode),datasets:[{label:'Amount (₹)',data:data.map(d=>d.total),backgroundColor:C.slice(0,4),borderRadius:10,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{grid:{color:'rgba(107,66,38,.06)'},ticks:{callback:v=>'₹'+Number(v).toLocaleString('en-IN')}},x:{grid:{display:false}}}}
+  });
+}
+
+function renderAppChart({pending,approved,rejected}) {
+  new Chart(document.getElementById('appChart').getContext('2d'), {
+    type:'pie',
+    data:{labels:['Pending','Approved','Rejected'],datasets:[{data:[pending,approved,rejected],backgroundColor:['#E8960C','#7A9E7E','#C0392B'],borderWidth:3,borderColor:'#FEFAF4'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:11},usePointStyle:true}}}}
+  });
+  document.getElementById('app-stats').innerHTML = `
+    <div style="text-align:center;padding:10px;background:rgba(232,150,12,.08);border-radius:9px">
+      <div style="font-size:1.4rem;font-weight:700;color:var(--amber);font-family:var(--font-display)">${pending}</div>
+      <div style="font-size:.7rem;color:var(--text-mute);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Pending</div>
+    </div>
+    <div style="text-align:center;padding:10px;background:rgba(122,158,126,.08);border-radius:9px">
+      <div style="font-size:1.4rem;font-weight:700;color:var(--sage);font-family:var(--font-display)">${approved}</div>
+      <div style="font-size:.7rem;color:var(--text-mute);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Approved</div>
+    </div>
+    <div style="text-align:center;padding:10px;background:rgba(192,57,43,.08);border-radius:9px">
+      <div style="font-size:1.4rem;font-weight:700;color:var(--rust);font-family:var(--font-display)">${rejected}</div>
+      <div style="font-size:.7rem;color:var(--text-mute);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Rejected</div>
+    </div>
+  `;
+}
+
+function renderActivity(items) {
+  const list = document.getElementById('activity-list');
+  if(!items.length){list.innerHTML='<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><h3>No activity yet</h3></div>';return;}
+  list.innerHTML = items.map(i=>`
+    <div class="activity-item">
+      <div class="activity-dot ${i.type==='Application'?'app':'apt'}">
+        ${i.type==='Application'
+          ?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>'
+          :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'}
+      </div>
+      <div class="activity-info"><strong>${i.type}: ${i.subject}</strong><p>${i.actor} · ${i.detail}</p></div>
+      <div class="activity-date">${formatDate(i.date)}</div>
+    </div>`).join('');
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

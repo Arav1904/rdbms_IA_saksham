@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Appointments — Paws Shelter</title>
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount">
+    <div class="sidebar-logo"><div class="logo-icon">🐾</div><h2><span>Paws</span> Shelter<br>System</h2></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <a href="index.html"        class="nav-item"><span class="icon">📊</span> Dashboard</a>
+      <div class="nav-section-label">Animals</div>
+      <a href="pets.html"         class="nav-item"><span class="icon">🐾</span> All Pets</a>
+      <a href="training.html"     class="nav-item"><span class="icon">🎓</span> Training</a>
+      <div class="nav-section-label">Adoption</div>
+      <a href="adopters.html"     class="nav-item"><span class="icon">👥</span> Adopters</a>
+      <a href="applications.html" class="nav-item"><span class="icon">📋</span> Applications</a>
+      <div class="nav-section-label">Care</div>
+      <a href="appointments.html" class="nav-item active"><span class="icon">📅</span> Appointments</a>
+      <a href="medical.html"      class="nav-item"><span class="icon">🩺</span> Medical Records</a>
+      <a href="providers.html"    class="nav-item"><span class="icon">👨‍⚕️</span> Care Providers</a>
+      <div class="nav-section-label">Admin</div>
+      <a href="staff.html"        class="nav-item"><span class="icon">🧑‍💼</span> Staff</a>
+      <a href="donations.html"    class="nav-item"><span class="icon">💛</span> Donations</a>
+    </nav>
+  </div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">📅 Appointments</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="openModal('addAptModal')">+ Schedule Appointment</button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div class="section-header">
+        <div><h1>Appointment Schedule</h1><p id="count-label">Loading…</p></div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Pet</th>
+              <th>Service</th>
+              <th>Provider</th>
+              <th>Date</th>
+              <th>Duration</th>
+              <th>Fee</th>
+              <th>Notes</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="apt-tbody">
+            <tr><td colspan="9"><div class="loader"><div class="spinner"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="pagination" class="pagination"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Add Appointment Modal -->
+<div class="modal-overlay" id="addAptModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📅 Schedule Appointment</h3>
+      <button class="modal-close" onclick="closeModal('addAptModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Appointment ID *</label><input class="form-input" id="na-id" placeholder="e.g. APT006"/></div>
+        <div class="form-group"><label class="form-label">Date *</label><input class="form-input" id="na-date" type="date"/></div>
+        <div class="form-group"><label class="form-label">Pet ID *</label><input class="form-input" id="na-pet" placeholder="e.g. P001"/></div>
+        <div class="form-group"><label class="form-label">Provider ID *</label><input class="form-input" id="na-provider" placeholder="e.g. PR001"/></div>
+        <div class="form-group">
+          <label class="form-label">Service Type *</label>
+          <select class="form-select" id="na-service">
+            <option>Vaccination</option>
+            <option>Checkup</option>
+            <option>Grooming</option>
+            <option>Surgery</option>
+            <option>Dental</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Duration (mins)</label><input class="form-input" id="na-dur" type="number" placeholder="30"/></div>
+        <div class="form-group full"><label class="form-label">Notes</label><textarea class="form-textarea" id="na-notes" placeholder="Additional notes…"></textarea></div>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:rgba(232,150,12,.1);border-radius:10px;font-size:.83rem;color:var(--brown-mid)">
+        ⚠️ <strong>Note:</strong> The system will block appointments for already-adopted pets (trigger enforced by DB).
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addAptModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="scheduleApt()">Schedule</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="js/api.js"></script>
+<script>
+let currentPage = 1, totalPages = 1;
+
+async function loadApts() {
+  const tbody = document.getElementById('apt-tbody');
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  try {
+    const data = await API.get('/appointments?page=' + currentPage + '&limit=10');
+    totalPages = Math.ceil(data.total / 10);
+    document.getElementById('count-label').textContent = `${data.total} appointment${data.total !== 1 ? 's' : ''}`;
+    if (!data.appointments.length) {
+      tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📅</div><h3>No appointments found</h3></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.appointments.map(a => `
+      <tr>
+        <td><strong>${a.appointment_id}</strong></td>
+        <td><strong>${a.pet_name}</strong><br><small style="color:var(--text-mute)">${a.breed || '—'}</small></td>
+        <td>
+          <span class="chip ${serviceColor(a.service_type)}">${serviceIcon(a.service_type)} ${a.service_type}</span>
+        </td>
+        <td>${a.provider_name}</td>
+        <td>${formatDate(a.appointment_date)}</td>
+        <td>${a.duration_mins ? a.duration_mins + ' min' : '—'}</td>
+        <td>${a.visiting_fee ? formatCurrency(a.visiting_fee) : '—'}</td>
+        <td style="max-width:140px;font-size:.82rem;color:var(--text-mute)">${a.notes || '—'}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteApt('${a.appointment_id}')">🗑</button></td>
+      </tr>
+    `).join('');
+    renderPagination();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><p>${err.message}</p></div></td></tr>`;
+  }
+}
+
+function serviceIcon(s) {
+  const m = { Vaccination:'💉', Checkup:'🩺', Grooming:'✂️', Surgery:'🔬', Dental:'🦷' };
+  return m[s] || '📋';
+}
+function serviceColor(s) {
+  const m = { Vaccination:'chip-blue', Checkup:'chip-green', Grooming:'chip-amber', Surgery:'chip-red', Dental:'chip-gray' };
+  return m[s] || 'chip-gray';
+}
+
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  if (currentPage > 1) html += `<button class="page-btn" onclick="goPage(${currentPage-1})">‹</button>`;
+  for (let i = 1; i <= totalPages; i++) html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  if (currentPage < totalPages) html += `<button class="page-btn" onclick="goPage(${currentPage+1})">›</button>`;
+  el.innerHTML = html;
+}
+function goPage(p) { currentPage = p; loadApts(); }
+
+async function scheduleApt() {
+  const body = {
+    appointment_id: document.getElementById('na-id').value.trim(),
+    appointment_date: document.getElementById('na-date').value,
+    pet_id:    document.getElementById('na-pet').value.trim(),
+    provider_id: document.getElementById('na-provider').value.trim(),
+    service_type: document.getElementById('na-service').value,
+    duration_mins: document.getElementById('na-dur').value || null,
+    notes: document.getElementById('na-notes').value.trim()
+  };
+  if (!body.appointment_id || !body.appointment_date || !body.pet_id || !body.provider_id) {
+    showToast('Please fill all required fields', 'error'); return;
+  }
+  try {
+    await API.post('/appointments', body);
+    showToast('Appointment scheduled! 📅', 'success');
+    closeModal('addAptModal');
+    loadApts();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function deleteApt(id) {
+  if (!confirm('Cancel this appointment?')) return;
+  try {
+    await API.delete('/appointments/' + id);
+    showToast('Appointment cancelled', 'success');
+    loadApts();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+document.getElementById('na-date').value = new Date().toISOString().split('T')[0];
+loadApts();
+</script>
+</body>
+</html>
