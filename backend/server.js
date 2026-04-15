@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path    = require('path');
 const express = require('express');
 const cors    = require('cors');
 
@@ -24,6 +25,15 @@ app.use('/api/training',      require('./routes/training'));
 // ── Health check ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ── Static frontend ──────────────────────────────────────────
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Fallback for frontend direct navigation
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 // ── 404 handler ─────────────────────────────────────────────

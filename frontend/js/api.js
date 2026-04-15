@@ -1,13 +1,19 @@
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = window.__API_BASE__ || '/api';
 
 // ── Auth guard ────────────────────────────────────────────────
 function requireAuth() {
-  const a = localStorage.getItem('shelter_auth');
-  if (!a || !JSON.parse(a).loggedIn) { window.location.href = 'login.html'; return null; }
-  return JSON.parse(a);
+  const auth = getAuth();
+  if (!auth?.loggedIn) { window.location.href = 'login.html'; return null; }
+  return auth;
 }
-function getAuth() { try { return JSON.parse(localStorage.getItem('shelter_auth')||'null'); } catch{ return null; } }
-function logout() { localStorage.removeItem('shelter_auth'); window.location.href = 'login.html'; }
+function getAuth() {
+  try { return JSON.parse(localStorage.getItem('shelter_auth') || 'null'); }
+  catch { return null; }
+}
+function logout() {
+  localStorage.removeItem('shelter_auth');
+  window.location.href = 'login.html';
+}
 
 // ── API fetch ─────────────────────────────────────────────────
 async function api(path, options = {}) {
@@ -91,7 +97,7 @@ function buildSidebar(activePage) {
       <div class="user-pill" onclick="logout()" title="Sign out">
         <div class="user-avatar">${initials}</div>
         <div class="user-info"><div class="uname">${auth.name||auth.username}</div><div class="urole">${auth.role}</div></div>
-        ${Icons.logout}
+        <span class="logout-icon">${Icons.logout}</span>
       </div>
     </div>
   `;
