@@ -1,0 +1,20 @@
+{
+  "name": "files-(1)",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node petadoption/server.js",
+    "dev": "node --watch petadoption/server.js",
+    "check": "npm --prefix petadoption run check",
+    "test": "npm --prefix petadoption run check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "pg": "^8.20.0"
+  }
+}
