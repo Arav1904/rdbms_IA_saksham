@@ -5,7 +5,7 @@ const pool    = require('../db');
 // GET /api/dashboard/stats — summary cards
 router.get('/stats', async (req, res) => {
   try {
-    const [pets, adopters, apps, donations, appointments] = await Promise.all([
+    const [pets, adopters, apps, appointments] = await Promise.all([
       pool.query(`SELECT
         COUNT(*) FILTER (WHERE adoption_status = 'Available') AS available,
         COUNT(*) FILTER (WHERE adoption_status = 'Adopted')   AS adopted,
@@ -18,7 +18,6 @@ router.get('/stats', async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'Approved') AS approved,
         COUNT(*) FILTER (WHERE status = 'Rejected') AS rejected
         FROM Adoption_Applications`),
-      pool.query(`SELECT COALESCE(SUM(amount),0) AS total FROM Donation`),
       pool.query(`SELECT COUNT(*) AS total FROM Appointments`)
     ]);
 
@@ -26,7 +25,6 @@ router.get('/stats', async (req, res) => {
       pets:         pets.rows[0],
       adopters:     adopters.rows[0],
       applications: apps.rows[0],
-      donations:    donations.rows[0],
       appointments: appointments.rows[0]
     });
   } catch (err) {
@@ -60,21 +58,6 @@ router.get('/monthly-intakes', async (req, res) => {
       FROM Pets
       GROUP BY month, sort_date
       ORDER BY sort_date
-    `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/dashboard/donation-breakdown — bar chart
-router.get('/donation-breakdown', async (req, res) => {
-  try {
-    const { rows } = await pool.query(`
-      SELECT payment_mode, COALESCE(SUM(amount),0) AS total, COUNT(*) AS count
-      FROM Donation
-      WHERE payment_mode IS NOT NULL
-      GROUP BY payment_mode
     `);
     res.json(rows);
   } catch (err) {

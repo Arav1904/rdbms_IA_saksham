@@ -60,14 +60,6 @@ router.get('/:id', async (req, res) => {
     `, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Pet not found' });
 
-    // Also get medical records
-    const med = await pool.query(`
-      SELECT mr.*, pcp.name AS vet_name
-      FROM Medical_Records mr
-      LEFT JOIN Pet_Care_Providers pcp ON mr.provider_id = pcp.provider_id
-      WHERE mr.pet_id = $1
-      ORDER BY mr.record_date DESC
-    `, [req.params.id]);
 
     // And appointments
     const apts = await pool.query(`
@@ -78,7 +70,7 @@ router.get('/:id', async (req, res) => {
       ORDER BY a.appointment_date DESC
     `, [req.params.id]);
 
-    res.json({ ...rows[0], medical_records: med.rows, appointments: apts.rows });
+    res.json({ ...rows[0], appointments: apts.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -91,25 +83,29 @@ router.post('/', async (req, res) => {
     await client.query('BEGIN');
     const {
       pet_id, name, breed, age, gender, weight_kg, intake_date,
-      adoption_status, microchip_id, is_vaccinated, shelter_id,
+      adoption_status, is_vaccinated, shelter_id,
       // type-specific
       type, size, is_trained, is_indoor, fur_length, species_name
     } = req.body;
 
+    const normalizedStatus = adoption_status || 'Available';
+    const normalizedVaccination = typeof is_vaccinated === 'boolean' ? is_vaccinated : false;
+    const normalizedType = type || null;
+
     await client.query(`
       INSERT INTO Pets (pet_id,name,breed,age,gender,weight_kg,intake_date,
-        adoption_status,microchip_id,is_vaccinated,shelter_id)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        adoption_status,is_vaccinated,shelter_id)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
     `, [pet_id, name, breed, age, gender, weight_kg, intake_date,
-        adoption_status || 'Available', microchip_id, is_vaccinated || false, shelter_id]);
+        normalizedStatus, normalizedVaccination, shelter_id]);
 
-    if (type === 'Dog') {
+    if (normalizedType === 'Dog') {
       await client.query(`INSERT INTO Dog (pet_id,size,is_trained) VALUES ($1,$2,$3)`,
-        [pet_id, size, is_trained || false]);
-    } else if (type === 'Cat') {
+        [pet_id, size || null, typeof is_trained === 'boolean' ? is_trained : false]);
+    } else if (normalizedType === 'Cat') {
       await client.query(`INSERT INTO Cat (pet_id,is_indoor,fur_length) VALUES ($1,$2,$3)`,
-        [pet_id, is_indoor !== undefined ? is_indoor : true, fur_length]);
-    } else if (type === 'Other') {
+        [pet_id, typeof is_indoor === 'boolean' ? is_indoor : true, fur_length || null]);
+    } else if (normalizedType === 'Other') {
       await client.query(`INSERT INTO Other_Animal (pet_id,species_name) VALUES ($1,$2)`,
         [pet_id, species_name]);
     }
@@ -128,12 +124,33 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { name, breed, age, gender, weight_kg, adoption_status, is_vaccinated } = req.body;
+    
+    // Fetch before update
+    const beforeResult = await pool.query(`SELECT * FROM Pets WHERE pet_id=$1`, [req.params.id]);
+    const beforeUpdate = beforeResult.rows[0];
+    if (!beforeUpdate) return res.status(404).json({ error: 'Pet not found' });
+
+    // Perform update
     await pool.query(`
       UPDATE Pets SET name=$1,breed=$2,age=$3,gender=$4,
         weight_kg=$5,adoption_status=$6,is_vaccinated=$7
       WHERE pet_id=$8
-    `, [name, breed, age, gender, weight_kg, adoption_status, is_vaccinated, req.params.id]);
-    res.json({ message: 'Pet updated' });
+    `, [
+      name ?? beforeUpdate.name,
+      breed ?? beforeUpdate.breed,
+      age ?? beforeUpdate.age,
+      gender ?? beforeUpdate.gender,
+      weight_kg ?? beforeUpdate.weight_kg,
+      adoption_status ?? beforeUpdate.adoption_status,
+      typeof is_vaccinated === 'boolean' ? is_vaccinated : beforeUpdate.is_vaccinated,
+      req.params.id
+    ]);
+    
+    // Fetch after update
+    const afterResult = await pool.query(`SELECT * FROM Pets WHERE pet_id=$1`, [req.params.id]);
+    const afterUpdate = afterResult.rows[0];
+
+    res.json({ message: 'Pet updated', beforeUpdate, afterUpdate });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -142,7 +159,8 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/pets/:id
 router.delete('/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM Pets WHERE pet_id=$1`, [req.params.id]);
+    const result = await pool.query(`DELETE FROM Pets WHERE pet_id=$1`, [req.params.id]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Pet not found' });
     res.json({ message: 'Pet deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

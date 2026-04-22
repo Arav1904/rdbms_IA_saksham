@@ -3,7 +3,7 @@ const API_BASE = window.__API_BASE__ || '/api';
 // ── Auth guard ────────────────────────────────────────────────
 function requireAuth() {
   const auth = getAuth();
-  if (!auth?.loggedIn) { window.location.href = 'login.html'; return null; }
+  if (!auth?.loggedIn) { window.location.href = '/login'; return null; }
   return auth;
 }
 function getAuth() {
@@ -12,7 +12,7 @@ function getAuth() {
 }
 function logout() {
   localStorage.removeItem('shelter_auth');
-  window.location.href = 'login.html';
+  window.location.href = '/login';
 }
 
 // ── API fetch ─────────────────────────────────────────────────
@@ -69,17 +69,14 @@ function buildSidebar(activePage) {
     { href:'index.html',        icon:Icons.bar,         label:'Dashboard' },
     { section:'Animals' },
     { href:'pets.html',         icon:Icons.paw,         label:'All Pets' },
-    { href:'training.html',     icon:Icons.award,       label:'Training' },
     { section:'Adoption' },
     { href:'adopters.html',     icon:Icons.users,       label:'Adopters' },
     { href:'applications.html', icon:Icons.clipboard,   label:'Applications' },
     { section:'Care' },
     { href:'appointments.html', icon:Icons.calendar,    label:'Appointments' },
-    { href:'medical.html',      icon:Icons.stethoscope, label:'Medical Records' },
     { href:'providers.html',    icon:Icons.shield,      label:'Care Providers' },
     { section:'Admin' },
     { href:'staff.html',        icon:Icons.users,       label:'Staff' },
-    { href:'donations.html',    icon:Icons.dollar,      label:'Donations' },
   ];
   const initials = auth.name ? auth.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : 'U';
   const html = `
@@ -150,8 +147,9 @@ function genId(prefix) { return prefix + Math.random().toString(36).substr(2,5).
 
 // ── Init on every page ────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const page = location.pathname.split('/').pop() || 'index.html';
-  if (page !== 'login.html') {
+  const path = location.pathname;
+  const page = path.split('/').pop() || 'index.html';
+  if (!path.endsWith('login.html') && path !== '/login' && path !== '/') {
     const auth = requireAuth();
     if (!auth) return;
     buildSidebar(page);

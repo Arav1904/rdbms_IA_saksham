@@ -8,7 +8,6 @@ router.get('/', async (req, res) => {
       SELECT pcp.*,
              v.vet_license_no, v.specialization,
              g.tools_used, g.grooming_styles,
-             (SELECT STRING_AGG(day_of_week,', ') FROM Provider_Availability pa WHERE pa.provider_id=pcp.provider_id) AS availability,
              (SELECT COUNT(*) FROM Appointments a WHERE a.provider_id=pcp.provider_id) AS appointment_count
       FROM Pet_Care_Providers pcp
       LEFT JOIN Veterinarian v ON pcp.provider_id = v.provider_id

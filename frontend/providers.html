@@ -8,30 +8,11 @@
 </head>
 <body>
 <div class="app-shell">
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><div class="logo-icon">🐾</div><h2><span>Paws</span> Shelter<br>System</h2></div>
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">Overview</div>
-      <a href="index.html"        class="nav-item"><span class="icon">📊</span> Dashboard</a>
-      <div class="nav-section-label">Animals</div>
-      <a href="pets.html"         class="nav-item"><span class="icon">🐾</span> All Pets</a>
-      <a href="training.html"     class="nav-item"><span class="icon">🎓</span> Training</a>
-      <div class="nav-section-label">Adoption</div>
-      <a href="adopters.html"     class="nav-item"><span class="icon">👥</span> Adopters</a>
-      <a href="applications.html" class="nav-item"><span class="icon">📋</span> Applications</a>
-      <div class="nav-section-label">Care</div>
-      <a href="appointments.html" class="nav-item"><span class="icon">📅</span> Appointments</a>
-      <a href="medical.html"      class="nav-item"><span class="icon">🩺</span> Medical Records</a>
-      <a href="providers.html"    class="nav-item active"><span class="icon">👨‍⚕️</span> Care Providers</a>
-      <div class="nav-section-label">Admin</div>
-      <a href="staff.html"        class="nav-item"><span class="icon">🧑‍💼</span> Staff</a>
-      <a href="donations.html"    class="nav-item"><span class="icon">💛</span> Donations</a>
-    </nav>
-  </div>
+  <aside class="sidebar" id="sidebar"></aside>
 
   <div class="main-content">
     <header class="topbar">
-      <div class="topbar-title">👨‍⚕️ Care Providers</div>
+      <div class="topbar-title">Care Providers</div>
       <div class="topbar-actions">
         <button class="btn btn-primary" onclick="openModal('addProviderModal')">+ Add Provider</button>
       </div>
@@ -52,7 +33,7 @@
 <div class="modal-overlay" id="addProviderModal">
   <div class="modal">
     <div class="modal-header">
-      <h3>👨‍⚕️ Add Care Provider</h3>
+      <h3> Add Care Provider</h3>
       <button class="modal-close" onclick="closeModal('addProviderModal')">✕</button>
     </div>
     <div class="modal-body">
@@ -99,24 +80,23 @@ function toggleProviderType() {
   document.getElementById('grm-styles').style.display   = isVet ? 'none' : '';
 }
 
-const DAY_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
 
 async function loadProviders() {
   const grid = document.getElementById('providers-grid');
   try {
     const providers = await API.get('/providers');
     if (!providers.length) {
-      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">👨‍⚕️</div><h3>No providers found</h3></div>';
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon"></div><h3>No providers found</h3></div>';
       return;
     }
     grid.innerHTML = providers.map(p => {
       const isVet = !!p.vet_license_no;
-      const days = p.availability ? p.availability.split(', ').sort((a,b) => DAY_ORDER.indexOf(a)-DAY_ORDER.indexOf(b)) : [];
       return `
         <div class="card" style="animation-fill-mode:both">
           <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
             <div style="width:56px;height:56px;border-radius:50%;background:${isVet ? 'rgba(74,144,196,.15)' : 'rgba(122,158,126,.15)'};display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">
-              ${isVet ? '🩺' : '✂️'}
+              ${isVet ? '' : ''}
             </div>
             <div>
               <div style="font-family:var(--font-display);font-size:1.05rem;color:var(--brown-dark)">${p.name}</div>
@@ -135,19 +115,15 @@ async function loadProviders() {
               <div class="detail-item"><label>Styles</label><span>${p.grooming_styles || '—'}</span></div>
               <div class="detail-item"><label>Tools</label><span>${p.tools_used || '—'}</span></div>
             `}
-            <div class="detail-item full" style="grid-column:1/-1"><label>Availability</label>
-              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
-                ${days.map(d => `<span class="chip chip-amber" style="font-size:.7rem">${d.slice(0,3)}</span>`).join('') || '—'}
-              </div>
-            </div>
+
           </div>
-          ${p.email ? `<div style="margin-top:12px;font-size:.8rem;color:var(--text-mute)">📧 ${p.email}</div>` : ''}
-          ${p.qualification ? `<div style="font-size:.8rem;color:var(--text-mute)">🎓 ${p.qualification}</div>` : ''}
+          ${p.email ? `<div style="margin-top:12px;font-size:.8rem;color:var(--text-mute)"> ${p.email}</div>` : ''}
+          ${p.qualification ? `<div style="font-size:.8rem;color:var(--text-mute)"> ${p.qualification}</div>` : ''}
         </div>
       `;
     }).join('');
   } catch (err) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${err.message}</p></div>`;
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon"></div><p>${err.message}</p></div>`;
   }
 }
 
@@ -169,7 +145,7 @@ async function addProvider() {
   if (!body.provider_id || !body.name) { showToast('ID and Name are required', 'error'); return; }
   try {
     await API.post('/providers', body);
-    showToast('Provider added! 👨‍⚕️', 'success');
+    showToast('Provider added! ', 'success');
     closeModal('addProviderModal');
     loadProviders();
   } catch (err) { showToast(err.message, 'error'); }

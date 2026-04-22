@@ -30,17 +30,20 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { application_id, adopter_id, pet_id, notes } = req.body;
+    const { application_id, application_date, adopter_id, pet_id, notes } = req.body;
     // Check pet availability
     const pet = await pool.query(`SELECT adoption_status FROM Pets WHERE pet_id=$1`, [pet_id]);
     if (!pet.rows.length) return res.status(404).json({ error: 'Pet not found' });
     if (pet.rows[0].adoption_status === 'Adopted')
       return res.status(400).json({ error: 'Pet is already adopted' });
 
+    const adopter = await pool.query(`SELECT 1 FROM Adopters WHERE adopter_id=$1`, [adopter_id]);
+    if (!adopter.rows.length) return res.status(404).json({ error: 'Adopter not found' });
+
     await pool.query(`
-      INSERT INTO Adoption_Applications (application_id,adopter_id,pet_id,notes)
-      VALUES ($1,$2,$3,$4)
-    `, [application_id, adopter_id, pet_id, notes]);
+      INSERT INTO Adoption_Applications (application_id,application_date,adopter_id,pet_id,notes)
+      VALUES ($1,COALESCE($2, CURRENT_DATE),$3,$4,$5)
+    `, [application_id, application_date, adopter_id, pet_id, notes || null]);
     res.status(201).json({ message: 'Application submitted', application_id });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -52,9 +55,10 @@ router.patch('/:id/status', async (req, res) => {
     const { status } = req.body;
     if (!['Pending','Approved','Rejected'].includes(status))
       return res.status(400).json({ error: 'Invalid status' });
-    await pool.query(`
+    const result = await pool.query(`
       UPDATE Adoption_Applications SET status=$1 WHERE application_id=$2
     `, [status, req.params.id]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Application not found' });
     res.json({ message: `Application ${status}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -63,7 +67,8 @@ router.patch('/:id/status', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM Adoption_Applications WHERE application_id=$1`, [req.params.id]);
+    const result = await pool.query(`DELETE FROM Adoption_Applications WHERE application_id=$1`, [req.params.id]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Application not found' });
     res.json({ message: 'Application deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

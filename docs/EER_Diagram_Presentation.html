@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pet Adoption and Care System - EER Diagram</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        background: '#dfe7f4',
+        primaryColor: '#d9e8ff',
+        primaryTextColor: '#22344d',
+        primaryBorderColor: '#5f7ea3',
+        lineColor: '#607d9b',
+        tertiaryColor: '#e8fff1',
+        fontFamily: 'Georgia, Times New Roman, serif'
+      }
+    });
+  </script>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #e7edf7 0%, #d9e3f3 100%);
+      color: #22344d;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .title {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .title h1 {
+      font-size: 24px;
+      margin: 0;
+      letter-spacing: 0.4px;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      font-size: 13px;
+      color: #4a607d;
+      font-style: italic;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .legend {
+      background: rgba(255, 255, 255, 0.85);
+      border: 2px solid #8ea5c4;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 8px 20px rgba(62, 89, 124, 0.15);
+    }
+
+    .legend h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #3d5675;
+    }
+
+    .legend ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .legend .swatch {
+      display: inline-block;
+      width: 22px;
+      height: 12px;
+      margin-right: 8px;
+      vertical-align: middle;
+      border: 2px solid #5f7ea3;
+      background: #d9e8ff;
+    }
+
+    .legend .attr {
+      background: #e8fff1;
+      border-color: #5f9a6e;
+      border-radius: 12px;
+    }
+
+    .legend .rel {
+      background: #fef0cc;
+      border-color: #c08b2f;
+      transform: skewX(-25deg);
+    }
+
+    .diagram-wrap {
+      background: rgba(255, 255, 255, 0.65);
+      border: 2px solid #8ea5c4;
+      border-radius: 12px;
+      padding: 16px;
+      overflow: auto;
+      box-shadow: 0 8px 20px rgba(62, 89, 124, 0.12);
+    }
+
+    .mermaid {
+      min-width: 980px;
+    }
+
+    .notes {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #38516f;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .mermaid {
+        min-width: 880px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="title">
+      <h1>Pet Adoption and Care System - EER Diagram</h1>
+      <p>Database: pet_adoption_db</p>
+    </div>
+
+    <div class="layout">
+      <aside class="legend">
+        <h2>Legend</h2>
+        <ul>
+          <li><span class="swatch"></span> Entity</li>
+          <li><span class="swatch attr"></span> Attribute (shown in entity blocks)</li>
+          <li><span class="swatch rel"></span> Relationship</li>
+          <li>Cardinality: || one, o| zero or one, o{ zero or many, |{ one or many</li>
+          <li>PK marks primary key, FK marks foreign key</li>
+          <li>Specialization is modeled using parent to child links</li>
+        </ul>
+      </aside>
+
+      <section class="diagram-wrap">
+        <pre class="mermaid">
+erDiagram
+    Shelter ||--o{ Pets : houses
+
+    Pets ||--o| Dog : is_a
+    Pets ||--o| Cat : is_a
+    Pets ||--o| Other_Animal : is_a
+
+    Adopters ||--o| Individual : is_a
+    Adopters ||--o| Organization : is_a
+
+    Pet_Care_Providers ||--o| Veterinarian : is_a
+    Pet_Care_Providers ||--o| Groomer : is_a
+
+    Staff ||--o| Volunteer : is_a
+    Staff ||--o| Employee : is_a
+
+    Adopters ||--o{ Adoption_Applications : submits
+    Pets ||--o{ Adoption_Applications : requested_for
+
+    Pets ||--o{ Appointments : has
+    Pet_Care_Providers ||--o{ Appointments : handled_by
+
+    Staff ||--o{ Staff_Pet : assigned
+    Pets ||--o{ Staff_Pet : cared_for
+
+    Adoption_Applications ||--o{ Application_Audit : logged_into
+
+    Shelter {
+        varchar shelter_id PK
+        varchar shelter_name
+        varchar address
+        int capacity
+        varchar phone
+    }
+
+    Pets {
+        varchar pet_id PK
+        varchar name
+        varchar breed
+        int age
+        varchar gender
+        decimal weight_kg
+        date intake_date
+        varchar adoption_status
+        boolean is_vaccinated
+        varchar shelter_id FK
+    }
+
+    Dog {
+        varchar pet_id PK,FK
+        varchar size
+        boolean is_trained
+    }
+
+    Cat {
+        varchar pet_id PK,FK
+        boolean is_indoor
+        varchar fur_length
+    }
+
+    Other_Animal {
+        varchar pet_id PK,FK
+        varchar species_name
+    }
+
+    Adopters {
+        varchar adopter_id PK
+        varchar first_name
+        varchar last_name
+        varchar email
+        varchar phone
+        varchar address
+    }
+
+    Individual {
+        varchar adopter_id PK,FK
+        varchar occupation
+    }
+
+    Organization {
+        varchar adopter_id PK,FK
+        varchar org_reg_no
+    }
+
+    Adoption_Applications {
+        varchar application_id PK
+        date application_date
+        varchar status
+        text notes
+        varchar adopter_id FK
+        varchar pet_id FK
+    }
+
+    Pet_Care_Providers {
+        varchar provider_id PK
+        varchar name
+        varchar qualification
+        varchar phone
+        varchar email
+        decimal visiting_fee
+    }
+
+    Veterinarian {
+        varchar provider_id PK,FK
+        varchar vet_license_no
+        varchar specialization
+    }
+
+    Groomer {
+        varchar provider_id PK,FK
+        varchar tools_used
+        varchar grooming_styles
+    }
+
+    Appointments {
+        varchar appointment_id PK
+        date appointment_date
+        varchar service_type
+        int duration_mins
+        text notes
+        varchar pet_id FK
+        varchar provider_id FK
+    }
+
+    Staff {
+        varchar staff_id PK
+        varchar name
+        varchar role
+        varchar shift
+    }
+
+    Volunteer {
+        varchar staff_id PK,FK
+        int hours_per_week
+    }
+
+    Employee {
+        varchar staff_id PK,FK
+        decimal salary
+        varchar emp_id
+    }
+
+    Staff_Pet {
+        varchar staff_id PK,FK
+        varchar pet_id PK,FK
+    }
+
+    App_Users {
+        varchar username PK
+        varchar full_name
+        varchar email
+        text password_hash
+        varchar role
+        timestamp created_at
+    }
+
+    Application_Audit {
+        int audit_id PK
+        varchar application_id
+        varchar adopter_id
+        varchar pet_id
+        timestamp logged_at
+        varchar action_type
+    }
+        </pre>
+      </section>
+    </div>
+
+    <div class="notes">
+      Use this page for presentation screenshots. Open in VS Code preview or browser and zoom out to capture the full diagram similar to a classic ER sheet.
+    </div>
+  </div>
+</body>
+</html>

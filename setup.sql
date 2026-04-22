@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS Pets (
     intake_date      DATE         DEFAULT CURRENT_DATE,
     adoption_status  VARCHAR(20)  DEFAULT 'Available'
                                   CHECK (adoption_status IN ('Available','Adopted','Reserved')),
-    microchip_id     VARCHAR(30)  UNIQUE,
     is_vaccinated    BOOLEAN      DEFAULT FALSE,
     shelter_id       VARCHAR(10)  REFERENCES Shelter(shelter_id) ON DELETE SET NULL
 );
@@ -56,15 +55,6 @@ CREATE TABLE IF NOT EXISTS Other_Animal (
 );
 
 -- ─────────────────────────────────────────────────────────────
--- PET PHOTOS  (multi-valued attribute of Pets)
--- ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS Pet_Photos (
-    photo_id   SERIAL       PRIMARY KEY,
-    pet_id     VARCHAR(10)  NOT NULL REFERENCES Pets(pet_id) ON DELETE CASCADE,
-    photo_url  VARCHAR(300) NOT NULL
-);
-
--- ─────────────────────────────────────────────────────────────
 -- ADOPTERS  (independent)
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS Adopters (
@@ -73,9 +63,7 @@ CREATE TABLE IF NOT EXISTS Adopters (
     last_name   VARCHAR(50)  NOT NULL,
     email       VARCHAR(100) UNIQUE,
     phone       VARCHAR(15)  UNIQUE NOT NULL,
-    address     VARCHAR(200),
-    dob         DATE,
-    id_proof    VARCHAR(100)
+    address     VARCHAR(200)
 );
 
 -- ─────────────────────────────────────────────────────────────
@@ -91,15 +79,6 @@ CREATE TABLE IF NOT EXISTS Organization (
     org_reg_no   VARCHAR(50)  NOT NULL
 );
 
--- ─────────────────────────────────────────────────────────────
--- REFERENCES  (weak entity — depends on Adopters)
--- ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS References_Table (
-    ref_id      SERIAL       PRIMARY KEY,
-    adopter_id  VARCHAR(10)  NOT NULL REFERENCES Adopters(adopter_id) ON DELETE CASCADE,
-    ref_name    VARCHAR(100) NOT NULL,
-    ref_phone   VARCHAR(15)  NOT NULL
-);
 
 -- ─────────────────────────────────────────────────────────────
 -- ADOPTION_APPLICATIONS  (weak entity — Adopters + Pets)
@@ -141,14 +120,6 @@ CREATE TABLE IF NOT EXISTS Groomer (
     grooming_styles  VARCHAR(200)
 );
 
--- ─────────────────────────────────────────────────────────────
--- PROVIDER AVAILABILITY  (multi-valued attribute)
--- ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS Provider_Availability (
-    avail_id     SERIAL      PRIMARY KEY,
-    provider_id  VARCHAR(10) NOT NULL REFERENCES Pet_Care_Providers(provider_id) ON DELETE CASCADE,
-    day_of_week  VARCHAR(15) CHECK (day_of_week IN ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'))
-);
 
 -- ─────────────────────────────────────────────────────────────
 -- APPOINTMENTS  (weak entity — Pets + Pet_Care_Providers)
@@ -161,20 +132,6 @@ CREATE TABLE IF NOT EXISTS Appointments (
     notes             TEXT,
     pet_id            VARCHAR(10)  NOT NULL REFERENCES Pets(pet_id) ON DELETE CASCADE,
     provider_id       VARCHAR(10)  NOT NULL REFERENCES Pet_Care_Providers(provider_id) ON DELETE RESTRICT
-);
-
--- ─────────────────────────────────────────────────────────────
--- MEDICAL_RECORDS  (weak entity — depends on Pets)
--- ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS Medical_Records (
-    record_id       SERIAL        PRIMARY KEY,
-    record_date     DATE          NOT NULL DEFAULT CURRENT_DATE,
-    diagnosis       TEXT,
-    treatment       TEXT,
-    follow_up_date  DATE,
-    cost            DECIMAL(10,2),
-    pet_id          VARCHAR(10)   NOT NULL REFERENCES Pets(pet_id) ON DELETE CASCADE,
-    provider_id     VARCHAR(10)   REFERENCES Veterinarian(provider_id) ON DELETE SET NULL
 );
 
 -- ─────────────────────────────────────────────────────────────
@@ -211,35 +168,17 @@ CREATE TABLE IF NOT EXISTS Staff_Pet (
 );
 
 -- ─────────────────────────────────────────────────────────────
--- DONATION  (depends on Adopters)
+-- APP_USERS  (for backend-backed authentication)
 -- ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS Donation (
-    donation_id    VARCHAR(10)   PRIMARY KEY,
-    amount         DECIMAL(10,2) NOT NULL CHECK (amount > 0),
-    donation_date  DATE          NOT NULL DEFAULT CURRENT_DATE,
-    purpose        VARCHAR(200),
-    payment_mode   VARCHAR(30)   CHECK (payment_mode IN ('Cash','UPI','Bank Transfer','Cheque')),
-    adopter_id     VARCHAR(10)   REFERENCES Adopters(adopter_id) ON DELETE SET NULL
+CREATE TABLE IF NOT EXISTS App_Users (
+    username       VARCHAR(50)  PRIMARY KEY,
+    full_name      VARCHAR(100) NOT NULL,
+    email          VARCHAR(100) UNIQUE,
+    password_hash  TEXT         NOT NULL,
+    role           VARCHAR(50)  NOT NULL DEFAULT 'Staff',
+    created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ─────────────────────────────────────────────────────────────
--- TRAINING_PROGRAMS  (independent)
--- ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS Training_Programs (
-    program_id      VARCHAR(10)  PRIMARY KEY,
-    program_name    VARCHAR(100) NOT NULL,
-    duration_weeks  INT          CHECK (duration_weeks > 0),
-    trainer_name    VARCHAR(100)
-);
-
--- ─────────────────────────────────────────────────────────────
--- DOG_TRAINING  (M:N junction — Dog ENROLLS IN Training)
--- ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS Dog_Training (
-    pet_id      VARCHAR(10) REFERENCES Dog(pet_id) ON DELETE CASCADE,
-    program_id  VARCHAR(10) REFERENCES Training_Programs(program_id) ON DELETE CASCADE,
-    PRIMARY KEY (pet_id, program_id)
-);
 
 -- ─────────────────────────────────────────────────────────────
 -- APPLICATION_AUDIT  (for trigger logging)
@@ -342,12 +281,12 @@ ON CONFLICT DO NOTHING;
 
 -- Pets
 INSERT INTO Pets VALUES
-('P001','Buddy',   'Labrador',       2,'Male',  12.5,'2023-06-01','Available','MC001',TRUE, 'SH001'),
-('P002','Tommy',   'Pomeranian',     3,'Male',   4.2,'2023-03-15','Adopted',  'MC002',TRUE, 'SH001'),
-('P003','Whiskers','Persian Cat',    4,'Female', 3.8,'2023-08-20','Available','MC003',FALSE,'SH001'),
-('P004','Rocky',   'German Shepherd',5,'Male',  30.0,'2022-11-10','Reserved', 'MC004',TRUE, 'SH001'),
-('P005','Max',     'Beagle',         1,'Male',   9.0,'2024-01-05','Available','MC005',TRUE, 'SH001'),
-('P006','Luna',    'Persian Cat',    2,'Female', 3.2,'2024-02-14','Available','MC006',FALSE,'SH001')
+('P001','Buddy',   'Labrador',       2,'Male',  12.5,'2023-06-01','Available',TRUE, 'SH001'),
+('P002','Tommy',   'Pomeranian',     3,'Male',   4.2,'2023-03-15','Adopted',  TRUE, 'SH001'),
+('P003','Whiskers','Persian Cat',    4,'Female', 3.8,'2023-08-20','Available',FALSE,'SH001'),
+('P004','Rocky',   'German Shepherd',5,'Male',  30.0,'2022-11-10','Reserved', TRUE, 'SH001'),
+('P005','Max',     'Beagle',         1,'Male',   9.0,'2024-01-05','Available',TRUE, 'SH001'),
+('P006','Luna',    'Persian Cat',    2,'Female', 3.2,'2024-02-14','Available',FALSE,'SH001')
 ON CONFLICT DO NOTHING;
 
 -- Dog subclass
@@ -359,10 +298,10 @@ INSERT INTO Cat VALUES ('P003',FALSE,'Long'),('P006',TRUE,'Medium') ON CONFLICT 
 
 -- Adopters
 INSERT INTO Adopters VALUES
-('AD001','Riya',  'Shah',  'riya@email.com', '9876543210','Andheri, Mumbai','1995-04-12','AADHAR-001'),
-('AD002','Arjun', 'Mehta', 'arjun@email.com','9123456780','Pune',           '1990-07-22','AADHAR-002'),
-('AD003','Sneha', 'Patel', 'sneha@email.com','9988001122','Thane',          '1998-01-30','AADHAR-003'),
-('AD004','Karan', 'Joshi', 'karan@email.com','9765001234','Mumbai',         '1985-09-15','AADHAR-004')
+('AD001','Riya',  'Shah',  'riya@email.com', '9876543210','Andheri, Mumbai'),
+('AD002','Arjun', 'Mehta', 'arjun@email.com','9123456780','Pune'),
+('AD003','Sneha', 'Patel', 'sneha@email.com','9988001122','Thane'),
+('AD004','Karan', 'Joshi', 'karan@email.com','9765001234','Mumbai')
 ON CONFLICT DO NOTHING;
 
 -- Individual subclass
@@ -371,12 +310,6 @@ INSERT INTO Individual VALUES ('AD001','Software Engineer'),('AD002','Teacher'),
 
 -- Organization subclass (AD004 is both Individual AND Organization — overlapping)
 INSERT INTO Organization VALUES ('AD004','ORG-MH-2024') ON CONFLICT DO NOTHING;
-
--- References
-INSERT INTO References_Table (adopter_id,ref_name,ref_phone) VALUES
-('AD001','Priya Desai','9800011111'),
-('AD001','Raj Mehta', '9800022222'),
-('AD002','Sunita Shah','9800033333') ON CONFLICT DO NOTHING;
 
 -- Pet_Care_Providers
 INSERT INTO Pet_Care_Providers VALUES
@@ -394,12 +327,6 @@ INSERT INTO Veterinarian VALUES
 INSERT INTO Groomer VALUES
 ('PR002','Clippers, Dryer, Combs','Puppy Cut, Teddy Bear Cut') ON CONFLICT DO NOTHING;
 
--- Provider Availability
-INSERT INTO Provider_Availability (provider_id, day_of_week) VALUES
-('PR001','Monday'),('PR001','Wednesday'),('PR001','Friday'),
-('PR002','Tuesday'),('PR002','Thursday'),('PR002','Saturday'),
-('PR003','Monday'),('PR003','Friday') ON CONFLICT DO NOTHING;
-
 -- Adoption_Applications
 INSERT INTO Adoption_Applications VALUES
 ('A001','2024-01-10','Pending', 'Interested in Buddy',  'AD001','P001'),
@@ -416,13 +343,6 @@ INSERT INTO Appointments VALUES
 ('APT003','2024-01-18','Checkup',        30, NULL,               'P003','PR001'),
 ('APT004','2024-01-25','Grooming',       45, NULL,               'P004','PR002'),
 ('APT005','2024-02-01','Vaccination',    30, 'Annual booster',   'P004','PR003')
-ON CONFLICT DO NOTHING;
-
--- Medical_Records
-INSERT INTO Medical_Records (record_date,diagnosis,treatment,follow_up_date,cost,pet_id,provider_id) VALUES
-('2024-01-05','Healthy — routine vaccination','Rabies + Parvovirus vaccine','2025-01-05',800.00,'P001','PR001'),
-('2024-01-18','Mild ear infection','Ear drops for 7 days','2024-01-25',700.00,'P003','PR001'),
-('2024-02-01','Healthy — annual booster','Multi-vaccine administered',NULL,700.00,'P004','PR003')
 ON CONFLICT DO NOTHING;
 
 -- Staff
@@ -445,24 +365,10 @@ INSERT INTO Staff_Pet VALUES
 ('ST002','P002'),('ST002','P004'),('ST002','P006')
 ON CONFLICT DO NOTHING;
 
--- Donation
-INSERT INTO Donation VALUES
-('DON001',2000.00,'2024-01-15','Food supplies',  'Cash',         'AD001'),
-('DON002',5000.00,'2024-02-01','Medical fund',   'UPI',          'AD002'),
-('DON003',1500.00,'2024-02-10','General support','Bank Transfer', 'AD004')
-ON CONFLICT DO NOTHING;
-
--- Training_Programs
-INSERT INTO Training_Programs VALUES
-('TR001','Basic Obedience', 4,'Rohan Verma'),
-('TR002','Advanced Agility',8,'Suresh Pillai')
-ON CONFLICT DO NOTHING;
-
--- Dog_Training (M:N)
-INSERT INTO Dog_Training VALUES
-('P001','TR001'),('P001','TR002'),
-('P004','TR001'),('P005','TR001')
-ON CONFLICT DO NOTHING;
+-- App_Users
+INSERT INTO App_Users (username, full_name, email, password_hash, role) VALUES
+('admin','Admin User','admin@pawsshelter.local','paws_admin_salt:442178fa0fc0cfb94e5fa573fa85e1b2c416d9252478ac04cfdab50d911077544901c05f760258de8455e51c44a89cfe4aa4ba4cf32de63c750f5591a69b7997','Administrator')
+ON CONFLICT (username) DO NOTHING;
 
 -- ============================================================
 -- VERIFY ALL TABLES
@@ -475,18 +381,14 @@ UNION ALL SELECT 'Other_Animal',        COUNT(*) FROM Other_Animal
 UNION ALL SELECT 'Adopters',            COUNT(*) FROM Adopters
 UNION ALL SELECT 'Individual',          COUNT(*) FROM Individual
 UNION ALL SELECT 'Organization',        COUNT(*) FROM Organization
-UNION ALL SELECT 'References_Table',    COUNT(*) FROM References_Table
 UNION ALL SELECT 'Adoption_Applications',COUNT(*) FROM Adoption_Applications
 UNION ALL SELECT 'Pet_Care_Providers',  COUNT(*) FROM Pet_Care_Providers
 UNION ALL SELECT 'Veterinarian',        COUNT(*) FROM Veterinarian
 UNION ALL SELECT 'Groomer',             COUNT(*) FROM Groomer
 UNION ALL SELECT 'Appointments',        COUNT(*) FROM Appointments
-UNION ALL SELECT 'Medical_Records',     COUNT(*) FROM Medical_Records
 UNION ALL SELECT 'Staff',               COUNT(*) FROM Staff
 UNION ALL SELECT 'Volunteer',           COUNT(*) FROM Volunteer
 UNION ALL SELECT 'Employee',            COUNT(*) FROM Employee
 UNION ALL SELECT 'Staff_Pet',           COUNT(*) FROM Staff_Pet
-UNION ALL SELECT 'Donation',            COUNT(*) FROM Donation
-UNION ALL SELECT 'Training_Programs',   COUNT(*) FROM Training_Programs
-UNION ALL SELECT 'Dog_Training',        COUNT(*) FROM Dog_Training
+UNION ALL SELECT 'App_Users',           COUNT(*) FROM App_Users
 ORDER BY table_name;

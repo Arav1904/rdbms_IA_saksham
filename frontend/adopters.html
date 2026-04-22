@@ -8,30 +8,11 @@
 </head>
 <body>
 <div class="app-shell">
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><div class="logo-icon">🐾</div><h2><span>Paws</span> Shelter<br>System</h2></div>
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">Overview</div>
-      <a href="index.html"        class="nav-item"><span class="icon">📊</span> Dashboard</a>
-      <div class="nav-section-label">Animals</div>
-      <a href="pets.html"         class="nav-item"><span class="icon">🐾</span> All Pets</a>
-      <a href="training.html"     class="nav-item"><span class="icon">🎓</span> Training</a>
-      <div class="nav-section-label">Adoption</div>
-      <a href="adopters.html"     class="nav-item active"><span class="icon">👥</span> Adopters</a>
-      <a href="applications.html" class="nav-item"><span class="icon">📋</span> Applications</a>
-      <div class="nav-section-label">Care</div>
-      <a href="appointments.html" class="nav-item"><span class="icon">📅</span> Appointments</a>
-      <a href="medical.html"      class="nav-item"><span class="icon">🩺</span> Medical Records</a>
-      <a href="providers.html"    class="nav-item"><span class="icon">👨‍⚕️</span> Care Providers</a>
-      <div class="nav-section-label">Admin</div>
-      <a href="staff.html"        class="nav-item"><span class="icon">🧑‍💼</span> Staff</a>
-      <a href="donations.html"    class="nav-item"><span class="icon">💛</span> Donations</a>
-    </nav>
-  </div>
+  <aside class="sidebar" id="sidebar"></aside>
 
   <div class="main-content">
     <header class="topbar">
-      <div class="topbar-title">👥 Adopters</div>
+      <div class="topbar-title">Adopters</div>
       <div class="topbar-actions">
         <button class="btn btn-primary" onclick="openModal('addAdopterModal')">+ Register Adopter</button>
       </div>
@@ -44,7 +25,7 @@
 
       <div class="filter-bar">
         <div class="search-box">
-          <span>🔍</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="searchInput" placeholder="Search by name or email…" oninput="debounceLoad()"/>
         </div>
       </div>
@@ -58,7 +39,6 @@
               <th>Phone</th>
               <th>Type</th>
               <th>Applications</th>
-              <th>Donated</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -76,7 +56,7 @@
 <div class="modal-overlay" id="addAdopterModal">
   <div class="modal">
     <div class="modal-header">
-      <h3>👤 Register New Adopter</h3>
+      <h3> Register New Adopter</h3>
       <button class="modal-close" onclick="closeModal('addAdopterModal')">✕</button>
     </div>
     <div class="modal-body">
@@ -93,8 +73,6 @@
         <div class="form-group"><label class="form-label">Last Name *</label><input class="form-input" id="aa-lname" placeholder="Last name"/></div>
         <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="aa-email" type="email" placeholder="email@example.com"/></div>
         <div class="form-group"><label class="form-label">Phone *</label><input class="form-input" id="aa-phone" placeholder="10-digit number"/></div>
-        <div class="form-group"><label class="form-label">Date of Birth</label><input class="form-input" id="aa-dob" type="date"/></div>
-        <div class="form-group"><label class="form-label">ID Proof</label><input class="form-input" id="aa-idproof" placeholder="AADHAR / PAN No."/></div>
         <div class="form-group full"><label class="form-label">Address</label><input class="form-input" id="aa-address" placeholder="Full address"/></div>
         <div class="form-group" id="field-occupation"><label class="form-label">Occupation</label><input class="form-input" id="aa-occupation" placeholder="e.g. Engineer"/></div>
         <div class="form-group" id="field-org" style="display:none"><label class="form-label">Org. Reg. No. *</label><input class="form-input" id="aa-orgreg" placeholder="ORG-MH-XXXX"/></div>
@@ -117,7 +95,7 @@
     <div class="modal-body" id="detail-body"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('adopterDetailModal')">Close</button>
-      <button class="btn btn-danger" id="delete-btn">🗑 Delete</button>
+      <button class="btn btn-danger" id="delete-btn"> Delete</button>
     </div>
   </div>
 </div>
@@ -151,7 +129,7 @@ async function loadAdopters() {
     totalPages = Math.ceil(data.total / 10);
     document.getElementById('count-label').textContent = `${data.total} adopter${data.total !== 1 ? 's' : ''} registered`;
     if (!data.adopters.length) {
-      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><h3>No adopters found</h3></div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"></div><h3>No adopters found</h3></div></td></tr>';
       return;
     }
     tbody.innerHTML = data.adopters.map(a => `
@@ -164,16 +142,15 @@ async function loadAdopters() {
           ${a.org_reg_no ? `<span class="chip chip-amber">Org</span>` : ''}
         </td>
         <td><span class="chip chip-gray">${a.app_count} apps</span></td>
-        <td>${formatCurrency(a.total_donated)}</td>
         <td>
           <button class="btn btn-outline btn-sm" onclick="viewAdopter('${a.adopter_id}')">View</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteAdopter('${a.adopter_id}')">🗑</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAdopter('${a.adopter_id}')"></button>
         </td>
       </tr>
     `).join('');
     renderPagination();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⚠️</div><p>${err.message}</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"></div><p>${err.message}</p></div></td></tr>`;
   }
 }
 
@@ -193,29 +170,20 @@ async function viewAdopter(id) {
   document.getElementById('detail-body').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const a = await API.get('/adopters/' + id);
-    document.getElementById('detail-title').textContent = `👤 ${a.first_name} ${a.last_name}`;
+    document.getElementById('detail-title').textContent = ` ${a.first_name} ${a.last_name}`;
     document.getElementById('delete-btn').onclick = () => deleteAdopter(id);
     document.getElementById('detail-body').innerHTML = `
       <div class="detail-grid" style="margin-bottom:20px">
         <div class="detail-item"><label>Adopter ID</label><span>${a.adopter_id}</span></div>
         <div class="detail-item"><label>Phone</label><span>${a.phone}</span></div>
         <div class="detail-item"><label>Email</label><span>${a.email || '—'}</span></div>
-        <div class="detail-item"><label>DOB</label><span>${formatDate(a.dob)}</span></div>
-        <div class="detail-item"><label>ID Proof</label><span>${a.id_proof || '—'}</span></div>
         <div class="detail-item"><label>Occupation</label><span>${a.occupation || '—'}</span></div>
         ${a.org_reg_no ? `<div class="detail-item"><label>Org. Reg. No.</label><span>${a.org_reg_no}</span></div>` : ''}
         <div class="detail-item full"><label>Address</label><span>${a.address || '—'}</span></div>
       </div>
 
-      ${a.references?.length ? `
-        <div class="card-title" style="margin-bottom:10px">📌 References</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-          ${a.references.map(r => `<div style="background:var(--cream);border-radius:10px;padding:10px 14px;font-size:.85rem">
-            <strong>${r.ref_name}</strong><br><span style="color:var(--text-mute)">${r.ref_phone}</span></div>`).join('')}
-        </div>` : ''}
-
       ${a.applications?.length ? `
-        <div class="card-title" style="margin-bottom:10px">📋 Applications</div>
+        <div class="card-title" style="margin-bottom:10px"> Applications</div>
         ${a.applications.map(ap => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--cream);border-radius:10px;margin-bottom:8px;font-size:.85rem">
             <span><strong>${ap.pet_name}</strong> (${ap.breed || '—'})</span>
@@ -223,13 +191,7 @@ async function viewAdopter(id) {
             ${statusBadge(ap.status)}
           </div>`).join('')}` : ''}
 
-      ${a.donations?.length ? `
-        <div class="card-title" style="margin:16px 0 10px">💛 Donations</div>
-        ${a.donations.map(d => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(232,150,12,.08);border-radius:10px;margin-bottom:8px;font-size:.85rem">
-            <span><strong>${formatCurrency(d.amount)}</strong> — ${d.purpose || 'General'}</span>
-            <span style="color:var(--text-mute)">${formatDate(d.donation_date)} · ${d.payment_mode}</span>
-          </div>`).join('')}` : ''}
+
     `;
   } catch (err) {
     document.getElementById('detail-body').innerHTML = `<div class="empty-state"><p>${err.message}</p></div>`;
@@ -244,8 +206,6 @@ async function addAdopter() {
     email:      document.getElementById('aa-email').value.trim(),
     phone:      document.getElementById('aa-phone').value.trim(),
     address:    document.getElementById('aa-address').value.trim(),
-    dob:        document.getElementById('aa-dob').value || null,
-    id_proof:   document.getElementById('aa-idproof').value.trim(),
     type:       document.getElementById('aa-type').value,
     occupation: document.getElementById('aa-occupation').value.trim(),
     org_reg_no: document.getElementById('aa-orgreg').value.trim()
@@ -253,7 +213,7 @@ async function addAdopter() {
   if (!body.adopter_id || !body.first_name || !body.phone) { showToast('ID, first name and phone are required', 'error'); return; }
   try {
     await API.post('/adopters', body);
-    showToast('Adopter registered! 👥', 'success');
+    showToast('Adopter registered! ', 'success');
     closeModal('addAdopterModal');
     loadAdopters();
   } catch (err) { showToast(err.message, 'error'); }

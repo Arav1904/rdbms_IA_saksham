@@ -1,6 +1,18 @@
 (function() {
+  const routeToPage = {
+    '': 'login.html',
+    login: 'login.html',
+    dashboard: 'index.html',
+    index: 'index.html',
+    pets: 'pets.html',
+    adopters: 'adopters.html',
+    applications: 'applications.html',
+    appointments: 'appointments.html',
+    providers: 'providers.html',
+    staff: 'staff.html',
+  };
   const currentPath = window.location.pathname.split('/').pop().split('?')[0];
-  const currentPage = currentPath === '' ? 'index.html' : currentPath;
+  const currentPage = routeToPage[currentPath] || (currentPath === '' ? 'login.html' : currentPath);
 
   window.__API_BASE__ = window.__API_BASE__ || '/api';
 
